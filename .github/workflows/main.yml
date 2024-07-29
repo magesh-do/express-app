@@ -21,9 +21,6 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: build app
-      run: npm run build
-
     - name: copy file via ssh key
       uses: appleboy/scp-action@v0.1.7
       with:
