@@ -24,37 +24,17 @@ jobs:
     - name: Build project
       run: npm run build
 
-    - name: Copy files to AWS EC2  
-    env:
-        SSH_PRIVATE_KEY: ${{ secrets.KEY }}
-        SSH_KNOWN_HOSTS: ${{ secrets.HOST }}
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan $SSH_KNOWN_HOSTS >> ~/.ssh/known_hosts
-        scp -i ~/.ssh/id_rsa -r ./* ubuntu@${{ secrets.HOST }}:/home/ubuntu/nodeapp
+    - name: Copy files to AWS EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME || 'ubuntu' }}
+        port: ${{ secrets.PORT || 22 }}
+        key: ${{ secrets.KEY }}
+        source: "."
+        target: "/home/ubuntu/express-app"
  
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
- 
-    steps:
-    - name: SSH into EC2 and deploy
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.KEY }} #ENV
-        SSH_KNOWN_HOSTS: ${{ secrets.HOST }}
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan $SSH_KNOWN_HOSTS >> ~/.ssh/known_hosts
-        ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.HOST }} << 'EOF'
-          cd /home/ubuntu/express-app
-          npm install
-          pm2 stop all || true
-          pm2 start index.js --name express-app
-        EOF
+    
 
 
       
