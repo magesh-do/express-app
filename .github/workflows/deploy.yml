@@ -1,29 +1,26 @@
-name: Deploy Express App
-
+name: Deploy express-app
+ 
 on:
   push:
     branches:
       - main
-
+ 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-
+ 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
+ 
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20.15.1'
-
+ 
     - name: Install dependencies
       run: npm install
-      
-    - name: Build project
-      run: npm run build
-
+ 
     - name: Copy files to AWS EC2
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -34,7 +31,32 @@ jobs:
         source: "."
         target: "/home/ubuntu/express-app"
  
-    
-
-
-      
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+ 
+    steps:
+    - name: SSH into EC2 and install Node.js, npm, and PM2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME || 'ubuntu' }}
+        port: ${{ secrets.PORT || 22 }}
+        key: ${{ secrets.KEY }}
+        script: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          sudo npm install -g pm2
+ 
+    - name: SSH into EC2 and deploy
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME || 'ubuntu' }}
+        port: ${{ secrets.PORT || 22 }}
+        key: ${{ secrets.KEY }}
+        script: |
+          cd /home/ubuntu/express-app
+          npm install
+          pm2 stop all || true
+          pm2 start index.js --name express-app
